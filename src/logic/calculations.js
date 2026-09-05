@@ -392,110 +392,181 @@ export function calculateStressTest(answers, safeEmi) {
   }
 }
 
+// ─── FIXED: RECOMMENDATION WITH SECURED ROUTE FIRST ─────────────
+
 export function getRecommendation(answers, affordability, lenderEligibility) {
   const wanted = Number(answers.amountWanted) || 0
   const safe = affordability.maxLoan || 0
   const lender = lenderEligibility.lenderLoan || 0
+
   const loanTypeRaw = answers.loanType || ''
   const loanType = loanTypeRaw.toLowerCase()
-  
-  const hasBounces = answers.previousBounces === '1 bounce' || answers.previousBounces === '2+ bounces'
-  const hasNoSavings = answers.emergencySavings === '0 months'
-  const hasHighInterestDebt = answers.hasHighInterestDebt === 'Yes'
-  const highExistingDebt = (Number(answers.existingEmis) || 0) > (Number(answers.netMonthlyIncome) || 0) * 0.4
 
-  // ─── DON'T BORROW (highest priority) ────────────────────────────
+  const hasBounces =
+    answers.previousBounces === '1 bounce' ||
+    answers.previousBounces === '2+ bounces'
+
+  const hasNoSavings =
+    answers.emergencySavings === '0 months'
+
+  const hasHighInterestDebt =
+    answers.hasHighInterestDebt === 'Yes'
+
+  const highExistingDebt =
+    (Number(answers.existingEmis) || 0) >
+    (Number(answers.netMonthlyIncome) || 0) * 0.4
+
+  const isSecured =
+    loanType.includes('loan against property') ||
+    loanType.includes('home loan') ||
+    loanType.includes('gold loan') ||
+    loanType.includes('vehicle loan')
+
+  const collateral =
+    Number(answers.collateralValue) || 0
+
+  const generatesIncome =
+    answers.loanGeneratesIncome === 'Yes, directly generates income' ||
+    answers.loanGeneratesIncome === 'Partly'
+
+  // ──────────────────────────────────────────────────────────────
+  // 1. HARD DON'T-BORROW SAFETY FLAGS
+  // ──────────────────────────────────────────────────────────────
+
   if (hasBounces && hasNoSavings && highExistingDebt) {
     return {
-      decision: 'Don\'t borrow',
-      reason: '⚠️ With recent EMI bounces, no emergency savings, and high existing debt, taking on more debt is risky. Focus on repaying existing loans and building savings first.'
+      decision: "Don't borrow",
+      reason:
+        '⚠️ Recent EMI bounces, no emergency savings, and high existing debt make new borrowing risky.'
     }
   }
 
   if (hasHighInterestDebt && hasBounces) {
     return {
-      decision: 'Don\'t borrow',
-      reason: '⚠️ You have high-interest debt and recent EMI bounces. Prioritize repaying your existing high-cost loans before taking new debt.'
+      decision: "Don't borrow",
+      reason:
+        '⚠️ High-interest debt combined with EMI bounces suggests you should stabilize existing debt before borrowing more.'
     }
   }
 
-  if (hasBounces && wanted > safe * 0.5) {
-    return {
-      decision: 'Don\'t borrow',
-      reason: `You have recent EMI bounces. Consider waiting 6-12 months to rebuild your repayment history before taking a new loan.`
+  // ──────────────────────────────────────────────────────────────
+  // 2. SECURED PRODUCT ROUTE (MOVED EARLIER)
+  // ──────────────────────────────────────────────────────────────
+  // Collateral gives the lender additional security.
+  // For a productive business loan against property,
+  // allow the secured route when the requested amount
+  // is within the lender's estimated secured capacity.
+
+  if (isSecured && collateral > 0) {
+    const collateralLimit = collateral * 0.60
+    const securedLenderLimit = Math.min(
+      lender > 0 ? lender : Infinity,
+      collateralLimit
+    )
+
+    if (wanted <= securedLenderLimit && generatesIncome && !hasBounces) {
+      return {
+        decision: 'Borrow',
+        reason:
+          `✅ A secured ${answers.loanType} is appropriate for your profile. ` +
+          `Your ₹${wanted.toLocaleString()} request is within the estimated ` +
+          `secured lending capacity of ~₹${Math.round(securedLenderLimit).toLocaleString()}. ` +
+          `The loan is intended to generate income, which supports the borrowing case.`
+      }
+    }
+
+    // Fallback: even if slightly above safe, but within lender limit
+    if (wanted <= lender && generatesIncome && !hasBounces) {
+      return {
+        decision: 'Borrow',
+        reason:
+          `✅ The secured loan route is reasonable because you have collateral and the borrowing is intended to generate income. ` +
+          `Estimated lender capacity is ~₹${Math.round(lender).toLocaleString()}.`
+      }
+    }
+
+    // Secured but requested too high
+    if (wanted > securedLenderLimit) {
+      return {
+        decision: 'Borrow less',
+        reason:
+          `While a secured loan is appropriate, your requested amount of ₹${wanted.toLocaleString()} ` +
+          `exceeds the estimated secured lending capacity of ~₹${Math.round(securedLenderLimit).toLocaleString()}. ` +
+          `Consider reducing your request or increasing collateral.`
+      }
     }
   }
+
+  // ──────────────────────────────────────────────────────────────
+  // 3. LARGE GAP BETWEEN REQUEST AND BOTH LIMITS
+  // ──────────────────────────────────────────────────────────────
 
   if (wanted > lender * 1.2 && wanted > safe * 1.2) {
     return {
-      decision: 'Don\'t borrow',
-      reason: `You want significantly more than both what lenders would sanction (₹${lender.toLocaleString()}) and what you can safely afford (₹${Math.round(safe).toLocaleString()}).`
+      decision: "Don't borrow",
+      reason:
+        `You want significantly more than both the estimated lender sanction ` +
+        `(₹${lender.toLocaleString()}) and the conservative safe amount ` +
+        `(₹${Math.round(safe).toLocaleString()}).`
     }
   }
 
-  // ─── SECURED LOAN SPECIAL CASE ──────────────────────────────────
-  const isSecured = loanType.includes('loan against property') || 
-                     loanType.includes('home loan') || 
-                     loanType.includes('gold loan') ||
-                     loanType.includes('vehicle loan')
-  
-  const hasCollateral = answers.collateralValue && Number(answers.collateralValue) > 0
+  // ──────────────────────────────────────────────────────────────
+  // 4. NORMAL BORROW-LESS RULES
+  // ──────────────────────────────────────────────────────────────
 
-  if (isSecured && hasCollateral) {
-    const securedSafeMultiplier = 1.15
-    const adjustedSafe = safe * securedSafeMultiplier
-    const adjustedLender = lender * 1.1
-
-    if (wanted <= adjustedSafe && wanted <= adjustedLender) {
-      const collateralValue = Number(answers.collateralValue).toLocaleString()
-      return {
-        decision: 'Borrow',
-        reason: `✅ A secured loan makes sense for your profile. Based on your income and collateral (₹${collateralValue}), you can safely borrow up to ₹${Math.round(adjustedSafe).toLocaleString()}, and lenders may sanction around ₹${Math.round(adjustedLender).toLocaleString()}. Your requested amount of ₹${wanted.toLocaleString()} fits within these bounds.`
-      }
-    }
-    
-    if (wanted > adjustedSafe && wanted <= adjustedLender) {
-      return {
-        decision: 'Borrow less',
-        reason: `While a secured loan is appropriate, your requested amount of ₹${wanted.toLocaleString()} exceeds your safe borrowing capacity of ₹${Math.round(adjustedSafe).toLocaleString()}. Consider reducing to ₹${Math.round(adjustedSafe).toLocaleString()} or less.`
-      }
-    }
-  }
-
-  // ─── BORROW LESS (check amount mismatches) ──────────────────────
   if (wanted > lender && wanted > safe) {
     return {
       decision: 'Borrow less',
-      reason: `You want ₹${wanted.toLocaleString()}, but lenders may sanction ~₹${lender.toLocaleString()} and you can safely afford ~₹${Math.round(safe).toLocaleString()}. Consider reducing your request.`
+      reason:
+        `You want ₹${wanted.toLocaleString()}, but lenders may sanction ` +
+        `~₹${lender.toLocaleString()} and you can safely afford ` +
+        `~₹${Math.round(safe).toLocaleString()}. Consider reducing your request.`
     }
   }
 
   if (wanted > safe) {
     return {
       decision: 'Borrow less',
-      reason: `You can safely afford about ₹${Math.round(safe).toLocaleString()}. Your requested amount of ₹${wanted.toLocaleString()} may stretch your finances.`
+      reason:
+        `You can safely afford about ₹${Math.round(safe).toLocaleString()}. ` +
+        `Your requested amount of ₹${wanted.toLocaleString()} may stretch your finances.`
     }
   }
 
   if (wanted > lender) {
     return {
       decision: 'Borrow less',
-      reason: `Lenders may sanction only ~₹${lender.toLocaleString()} based on your profile. Consider reducing your request or improving your credit profile.`
+      reason:
+        `Lenders may sanction only ~₹${lender.toLocaleString()} based on your profile.`
     }
   }
 
-  // ─── CONSUMPTION LOAN BORROW LESS ───────────────────────────────
-  if (answers.loanGeneratesIncome === 'No, pure consumption' && wanted > safe * 0.7) {
+  // ──────────────────────────────────────────────────────────────
+  // 5. CONSUMPTION BORROWING
+  // ──────────────────────────────────────────────────────────────
+
+  if (
+    answers.loanGeneratesIncome === 'No, pure consumption' &&
+    wanted > safe * 0.7
+  ) {
     return {
       decision: 'Borrow less',
-      reason: `Since this is for consumption (not income generation), consider borrowing less — ₹${Math.round(safe * 0.7).toLocaleString()} would be safer.`
+      reason:
+        `Since this is consumption borrowing rather than income-generating borrowing, ` +
+        `a smaller amount of about ₹${Math.round(safe * 0.7).toLocaleString()} would be safer.`
     }
   }
 
-  // ─── BORROW ──────────────────────────────────────────────────────
+  // ──────────────────────────────────────────────────────────────
+  // 6. DEFAULT - BORROW
+  // ──────────────────────────────────────────────────────────────
+
   return {
     decision: 'Borrow',
-    reason: `✅ Based on your income and obligations, you can safely afford up to ₹${Math.round(safe).toLocaleString()}, and lenders may sanction around ₹${lender.toLocaleString()}. Your requested amount of ₹${wanted.toLocaleString()} fits within these bounds.`
+    reason:
+      `✅ Based on your income, obligations, and borrowing profile, ` +
+      `the requested amount fits within the estimated lending and affordability limits.`
   }
 }
 

@@ -1,186 +1,220 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { getFilteredQuestions } from '../logic/questions'
 import { calculateAll } from '../logic/calculations'
 
-function Assessment({ onComplete, onCancel, initialAnswers, topic }) {
+function Assessment({ onComplete, onCancel, initialAnswers }) {
   const [answers, setAnswers] = useState(initialAnswers || {})
-  const [currentIndex, setCurrentIndex] = useState(0)
-  const [showCancelConfirm, setShowCancelConfirm] = useState(false)
-  
+  const [currentQuestionId, setCurrentQuestionId] = useState(null)
+  const [error, setError] = useState('')
+
+  // Get the list of questions based on current answers
   const filteredQuestions = getFilteredQuestions(answers)
   const totalQuestions = filteredQuestions.length
-  const currentQuestion = filteredQuestions[currentIndex]
-  
-  const progress = totalQuestions > 0 ? ((currentIndex) / totalQuestions) * 100 : 0
+
+  // Find current question by ID
+  const currentQuestion = currentQuestionId
+    ? filteredQuestions.find(q => q.id === currentQuestionId)
+    : filteredQuestions[0]
+
+  const currentIndex = currentQuestion
+    ? filteredQuestions.findIndex(q => q.id === currentQuestion.id)
+    : 0
+
+  const progress = totalQuestions > 0
+    ? ((currentIndex + 1) / totalQuestions) * 100
+    : 0
+
+  // ─── useEffect to handle adaptive navigation ──────────────
+  useEffect(() => {
+    if (filteredQuestions.length === 0) {
+      setCurrentQuestionId(null)
+      return
+    }
+
+    if (!currentQuestionId) {
+      setCurrentQuestionId(filteredQuestions[0].id)
+      return
+    }
+
+    const stillExists = filteredQuestions.some(
+      q => q.id === currentQuestionId
+    )
+
+    if (!stillExists) {
+      setCurrentQuestionId(filteredQuestions[0].id)
+    }
+  }, [currentQuestionId, totalQuestions])
 
   const handleAnswer = (value) => {
-    if (currentQuestion) {
-      setAnswers({ ...answers, [currentQuestion.id]: value })
-    }
+    if (!currentQuestion) return
+
+    setAnswers(prev => ({
+      ...prev,
+      [currentQuestion.id]: value
+    }))
+
+    setError('')
   }
 
+  // ─── FIXED: handleNext with adaptive recalculation ──────────
   const handleNext = () => {
     if (!currentQuestion) return
-    
-    // Get the value based on question type
-    let value = answers[currentQuestion.id] || ''
-    
-    // If it's a select type and no value is selected, show error
-    if (currentQuestion.type === 'select' && !value) {
-      // Highlight the options to show user needs to select
-      const options = document.querySelectorAll('.option-card')
-      options.forEach(el => {
-        el.style.borderColor = '#e74c3c'
-        setTimeout(() => {
-          el.style.borderColor = ''
-        }, 1500)
-      })
+
+    const value = answers[currentQuestion.id] ?? ''
+
+    // Required questions cannot be skipped
+    if (!currentQuestion.optional && String(value).trim() === '') {
+      setError('Please select or enter an answer to continue.')
       return
     }
-    
-    // For number/text types, get value from input
-    if (currentQuestion.type === 'number' || currentQuestion.type === 'text') {
-      const input = document.getElementById('qInput')
-      if (input) {
-        value = input.value
-      }
+
+    setError('')
+
+    // Save the current answer first
+    const newAnswers = {
+      ...answers,
+      [currentQuestion.id]: value
     }
-    
-    if (!currentQuestion.optional && !value) {
-      return
-    }
-    
-    const newAnswers = { ...answers, [currentQuestion.id]: value }
+
     setAnswers(newAnswers)
-    
-    if (currentIndex < totalQuestions - 1) {
-      const newFiltered = getFilteredQuestions(newAnswers)
-      const currentId = currentQuestion.id
-      const newIndex = newFiltered.findIndex(q => q.id === currentId)
-      if (newIndex === -1) {
-        setCurrentIndex(0)
-      } else {
-        setCurrentIndex(Math.min(newIndex + 1, newFiltered.length - 1))
+
+    // IMPORTANT: Recalculate the question list using the NEW answers.
+    // This makes adaptive questions appear in the correct order.
+    const newFilteredQuestions = getFilteredQuestions(newAnswers)
+
+    const newCurrentIndex = newFilteredQuestions.findIndex(
+      q => q.id === currentQuestion.id
+    )
+
+    // Current question somehow disappeared
+    if (newCurrentIndex === -1) {
+      if (newFilteredQuestions.length > 0) {
+        setCurrentQuestionId(newFilteredQuestions[0].id)
       }
-    } else {
-      const results = calculateAll(newAnswers)
-      onComplete(newAnswers, results)
+      return
     }
+
+    // There is another question
+    if (newCurrentIndex < newFilteredQuestions.length - 1) {
+      const nextQuestion = newFilteredQuestions[newCurrentIndex + 1]
+      setCurrentQuestionId(nextQuestion.id)
+      return
+    }
+
+    // ─────────────────────────────────────────
+    // FINAL QUESTION → CALCULATE RESULTS
+    // ─────────────────────────────────────────
+
+    const hasIncome = newAnswers.netMonthlyIncome &&
+      Number(newAnswers.netMonthlyIncome) > 0
+
+    const hasAmount = newAnswers.amountWanted &&
+      Number(newAnswers.amountWanted) > 0
+
+    if (!hasIncome || !hasAmount) {
+      const missing = []
+      if (!hasIncome) missing.push('monthly income')
+      if (!hasAmount) missing.push('loan amount')
+      setError(`Please enter your ${missing.join(' and ')} before seeing results.`)
+      return
+    }
+
+    const results = calculateAll(newAnswers)
+    onComplete(newAnswers, results)
   }
 
   const handleBack = () => {
     if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1)
+      const prevQuestion = filteredQuestions[currentIndex - 1]
+      setCurrentQuestionId(prevQuestion.id)
+      setError('')
     }
   }
 
   const handleCancel = () => {
     if (Object.keys(answers).length > 0) {
-      setShowCancelConfirm(true)
+      if (window.confirm('Are you sure? Your assessment progress will be lost.')) {
+        onCancel()
+      }
     } else {
       onCancel()
     }
   }
 
-  const confirmCancel = () => {
-    setShowCancelConfirm(false)
-    onCancel()
+  if (!currentQuestion || filteredQuestions.length === 0) {
+    return (
+      <div className="assessment">
+        <div className="assessment-header">
+          <button className="btn btn-outline btn-sm" onClick={handleCancel}>
+            ← Home
+          </button>
+        </div>
+        <div style={{ textAlign: 'center', padding: '60px 0' }}>
+          <p>Loading questions...</p>
+        </div>
+      </div>
+    )
   }
 
-  if (!currentQuestion) {
-    return <div className="assessment"><p>Loading...</p></div>
-  }
+  const value = answers[currentQuestion.id] ?? ''
 
   const renderInput = () => {
-    const val = answers[currentQuestion.id] || ''
-    
     if (currentQuestion.type === 'select') {
       return (
         <div className="options-grid">
-          {currentQuestion.options.map(opt => (
+          {currentQuestion.options.map(option => (
             <button
-              key={opt}
-              className={`option-card ${val === opt ? 'selected' : ''}`}
+              key={option}
+              className={`option-card ${value === option ? 'selected' : ''}`}
               onClick={() => {
-                handleAnswer(opt)
-                // Auto-advance after selection for better UX
-                setTimeout(handleNext, 300)
+                handleAnswer(option)
+                // NO auto-advance - user must click Continue
               }}
               type="button"
             >
-              <div className="option-main">{opt}</div>
+              <div className="option-main">{option}</div>
             </button>
           ))}
         </div>
       )
     }
-    
+
     if (currentQuestion.type === 'number') {
       return (
         <input
           id="qInput"
           className="input-field"
           type="number"
-          value={val}
+          value={value}
           onChange={(e) => handleAnswer(e.target.value)}
-          placeholder="e.g. 450000"
+          placeholder={currentQuestion.placeholder || 'Enter amount'}
           min={currentQuestion.min}
           max={currentQuestion.max}
-          onKeyDown={(e) => e.key === 'Enter' && handleNext()}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              handleNext()
+            }
+          }}
           autoFocus
         />
       )
     }
-    
+
     return (
       <input
         id="qInput"
         className="input-field"
         type="text"
-        value={val}
+        value={value}
         onChange={(e) => handleAnswer(e.target.value)}
-        placeholder={currentQuestion.placeholder}
-        onKeyDown={(e) => e.key === 'Enter' && handleNext()}
+        placeholder={currentQuestion.placeholder || 'Enter your answer'}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            handleNext()
+          }
+        }}
         autoFocus
       />
-    )
-  }
-
-  // ─── CANCEL CONFIRMATION ──────────────────────────────────
-  if (showCancelConfirm) {
-    return (
-      <div className="assessment">
-        <div className="assessment-header">
-          <div className="logo">
-            <span className="logo-icon">📊</span>
-            <span className="logo-text" style={{ fontSize: '18px' }}>Borrower Copilot</span>
-          </div>
-        </div>
-        <div style={{ 
-          maxWidth: '480px', 
-          margin: '80px auto',
-          textAlign: 'center',
-          padding: '40px',
-          background: 'white',
-          borderRadius: '16px',
-          border: '1px solid #CFDCE6'
-        }}>
-          <h2 style={{ fontFamily: 'Georgia, serif', fontSize: '28px', marginBottom: '8px' }}>
-            Are you sure?
-          </h2>
-          <p style={{ color: '#60778F', marginBottom: '24px' }}>
-            Your assessment progress will be lost.
-          </p>
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-            <button className="btn btn-outline" onClick={() => setShowCancelConfirm(false)}>
-              Stay
-            </button>
-            <button className="btn btn-teal" onClick={confirmCancel}>
-              Leave assessment
-            </button>
-          </div>
-        </div>
-      </div>
     )
   }
 
@@ -212,6 +246,19 @@ function Assessment({ onComplete, onCancel, initialAnswers, topic }) {
             Optional — skip if not sure
           </div>
         )}
+        {error && (
+          <div style={{
+            color: '#c62828',
+            marginTop: '12px',
+            fontSize: '14px',
+            padding: '10px 16px',
+            background: '#fde8e8',
+            borderRadius: '8px',
+            border: '1px solid #f5c6c6'
+          }}>
+            {error}
+          </div>
+        )}
       </div>
 
       {/* ─── FOOTER ───────────────────────────────────────────── */}
@@ -229,11 +276,7 @@ function Assessment({ onComplete, onCancel, initialAnswers, topic }) {
               ← Back
             </button>
           )}
-          <button 
-            className="btn btn-teal" 
-            onClick={handleNext}
-            disabled={currentQuestion.type === 'select' && !answers[currentQuestion.id]}
-          >
+          <button className="btn btn-teal" onClick={handleNext}>
             {currentIndex === totalQuestions - 1 ? 'See my results →' : 'Continue →'}
           </button>
         </div>

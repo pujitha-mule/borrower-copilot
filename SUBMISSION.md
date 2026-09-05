@@ -197,7 +197,7 @@ This document contains the three required borrower run-throughs and the five-min
 
 | Metric | Result |
 |---|---|
-| Safe EMI | ₹21,000/month |
+| Safe EMI | ₹15,876/month |
 | Recommended tenure | 5 years |
 
 ### Tenure Trade-Off
@@ -206,14 +206,14 @@ This document contains the three required borrower run-throughs and the five-min
 |---|---:|---:|---|
 | 3 years | ₹27,500 | ₹3,90,000 | ⚠️ Above safe EMI |
 | 4 years | ₹22,500 | ₹4,20,000 | ⚠️ Above safe EMI |
-| 5 years | ₹21,000 | ₹5,10,000 | ✅ Within safe EMI |
+| 5 years | ₹15,876 | ₹5,10,000 | ✅ Within safe EMI |
 
 ### Stress Test
 
 | Scenario | Result |
 |---|---|
 | Income drops 20% | New income: ₹62,400 → EMI: Manageable |
-| Interest rate rises 2% | New EMI: ₹24,000 → Additional burden: ₹3,000/month |
+| Interest rate rises 2% | New EMI: ₹18,500 → Additional burden: ₹2,624/month |
 
 ## Secured Loan Recommendation
 
@@ -228,7 +228,7 @@ Because Ravi's credit score is unknown, the rate/confidence output remains appro
 - **Borrowing recommendation:** 🟢 Borrow
 - **Requested amount:** ₹15,00,000
 - **Recommended maximum:** ₹7,47,210
-- **Maximum EMI:** ₹21,000/month
+- **Maximum EMI:** ₹15,876/month
 - **Fair interest rate:** 8.0% – 10.5%
 - **All-in annualized cost:** 9.0% – 11.5%
 - **Loan type:** Loan against property
@@ -487,7 +487,7 @@ The purpose is not to label Anita as a bad borrower. The purpose is to show that
 | Profile | Decision | Lender Sanction | Safe Amount | Rate Range | EMI |
 |---|---|---:|---:|---|---:|
 | **Priya** | 🟢 Borrow | ₹21,63,404 | ₹16,47,288 | 7.5% – 10.0% | ₹35,000/month |
-| **Ravi** | 🟢 Borrow | ₹20,90,997 | ₹7,47,210 | 8.0% – 10.5% | ₹21,000/month |
+| **Ravi** | 🟢 Borrow | ₹20,90,997 | ₹7,47,210 | 8.0% – 10.5% | ₹15,876/month |
 | **Anita** | 🔴 Don't Borrow | ₹0 | ₹0 | 12.5% – 16.0% | ₹0/month |
 
 ---
