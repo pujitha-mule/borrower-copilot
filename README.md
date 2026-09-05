@@ -3,6 +3,9 @@
 A borrowing decision assistant for Indian borrowers. Understand your borrowing position before talking to a lender with transparent, rule-based guidance.
 
 **Status:** Beta
+## Live Demo
+
+**Live App:** https://borrower-copilot-ruddy.vercel.app/
 
 ---
 
