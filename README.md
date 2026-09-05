@@ -1,8 +1,10 @@
 # Borrower Copilot
 
-A personal loan decision assistant for Indian borrowers. Understand your borrowing position before talking to a lender with transparent, rule-based guidance.
+A borrowing decision assistant for Indian borrowers. Understand your borrowing position before talking to a lender with transparent, rule-based guidance.
 
-Status: Beta
+**Status:** Beta
+
+---
 
 ## Overview
 
@@ -16,6 +18,8 @@ It answers four critical questions:
 4. What EMI should I agree to? — Understand a comfortable monthly payment and stress scenarios
 
 The app also generates a Negotiation Card that can be used when speaking with lenders.
+
+---
 
 ## Features
 
@@ -65,14 +69,18 @@ The app also generates a Negotiation Card that can be used when speaking with le
 - Ravi — Self-employed borrower, ₹60K/month, wants ₹15L through a Loan Against Property
 - Anita — Informal / Variable income, ₹28K/month, wants ₹1.5L
 
+---
+
 ## Tech Stack
 
 | Technology | Purpose |
-|------------|---------|
+|---|---|
 | React 18 | UI framework |
 | Vite | Build tool and development server |
 | JavaScript ES6+ | Application logic and calculations |
 | Vanilla CSS | Styling |
+
+---
 
 ## Getting Started
 
@@ -88,76 +96,106 @@ git clone https://github.com/pujitha-mule/borrower-copilot.git
 cd borrower-copilot
 npm install
 npm run dev
+```
+
 Open the local URL shown by Vite, normally:
 
-    http://localhost:5173
+```text
+http://localhost:5173
+```
 
 ### Build for Production
 
-    npm run build
+```bash
+npm run build
+```
 
 ### Preview Production Build
 
-    npm run preview
+```bash
+npm run preview
+```
+
+---
 
 ## Project Structure
 
-    borrower-copilot/
-    ├── src/
-    │   ├── components/
-    │   │   ├── ResultCard.jsx
-    │   │   └── NegotiationCard.jsx
-    │   ├── pages/
-    │   │   ├── Home.jsx
-    │   │   ├── Assessment.jsx
-    │   │   └── Results.jsx
-    │   ├── logic/
-    │   │   ├── questions.js
-    │   │   └── calculations.js
-    │   ├── data/
-    │   │   └── borrowerProfiles.js
-    │   ├── App.jsx
-    │   ├── main.jsx
-    │   └── index.css
-    ├── index.html
-    ├── package.json
-    ├── vite.config.js
-    ├── RULES.md
-    ├── SUBMISSION.md
-    └── README.md
+```text
+borrower-copilot/
+├── src/
+│   ├── components/
+│   │   ├── ResultCard.jsx
+│   │   └── NegotiationCard.jsx
+│   ├── pages/
+│   │   ├── Home.jsx
+│   │   ├── Assessment.jsx
+│   │   └── Results.jsx
+│   ├── logic/
+│   │   ├── questions.js
+│   │   └── calculations.js
+│   ├── data/
+│   │   └── borrowerProfiles.js
+│   ├── App.jsx
+│   ├── main.jsx
+│   └── index.css
+├── index.html
+├── package.json
+├── vite.config.js
+├── RULES.md
+├── SUBMISSION.md
+└── README.md
+```
+
+---
 
 ## Demo Profiles
 
 | Profile | Income Type | Monthly Income | Requested Amount | Loan Type |
-|---------|-------------|----------------|------------------|-----------|
+|---|---|---:|---:|---|
 | Priya | Salaried | ₹1,10,000 | ₹8,00,000 | Personal Loan |
 | Ravi | Self-employed | ₹60,000 | ₹15,00,000 | Loan Against Property |
 | Anita | Informal / Variable | ₹28,000 | ₹1,50,000 | Personal Loan |
 
 ### Expected Outcomes
 
-- Priya → Borrow or Borrow Less
-- Ravi → Borrow with secured-loan recommendation
-- Anita → Don't Borrow
+- **Priya → Borrow**
+- **Ravi → Borrow with secured Loan Against Property recommendation**
+- **Anita → Don't Borrow**
 
-Click "Load profile →" on a demo profile to populate the assessment with the corresponding borrower information.
+Click **"Load profile →"** on a demo profile to populate the assessment with the corresponding borrower information.
+
+### Tested Results
+
+| Profile | Decision | Requested | Safe Amount | Lender Estimate |
+|---|---|---:|---:|---:|
+| Priya | Borrow | ₹8,00,000 | ₹16,47,288 | ₹21,63,404 |
+| Ravi | Borrow — Secured LAP | ₹15,00,000 | ₹7,47,210 | ₹20,90,997 |
+| Anita | Don't Borrow | ₹1,50,000 | — | — |
+
+Ravi is routed to a secured **Loan Against Property** path because he has ₹45 lakh of unencumbered collateral and the requested borrowing is intended to support income-generating business activity.
+
+The app deliberately keeps Ravi's conservative safe borrowing amount separate from the higher estimated lender capacity.
+
+---
 
 ## Calculation Rules
 
-All calculation rules, thresholds, bands, and assumptions are documented in RULES.md.
+All calculation rules, thresholds, bands, and assumptions are documented in `RULES.md`.
 
 The application intentionally separates:
 
-- Lender sanction estimate — an estimate of what a lender may potentially approve
-- Safe borrowing amount — an affordability-focused estimate for the borrower
-- Fair rate range — an estimated range based on borrower characteristics
-- Safe EMI — a conservative monthly EMI limit
-- All-in annualized cost — includes applicable processing fees
-- Stress-tested affordability — checks the effect of income reduction and rate increases
+- **Lender sanction estimate** — an estimate of what a lender may potentially approve
+- **Safe borrowing amount** — an affordability-focused estimate for the borrower
+- **Fair rate range** — an estimated range based on borrower characteristics
+- **Safe EMI** — a conservative monthly EMI limit
+- **All-in annualized cost** — includes applicable processing fees
+- **Stress-tested affordability** — checks the effect of income reduction and rate increases
 
 The prototype uses transparent, rule-based calculations rather than a machine-learning approval model.
 
-See RULES.md for the complete rules and assumptions.
+See `RULES.md` for the complete rules and assumptions.
+
+---
 
 ## Design
 
@@ -175,19 +213,21 @@ The design includes:
 - Adaptive question flow
 - Calm cream, navy, teal, and coral visual system
 
+---
+
 ## How to Use
 
 ### For Borrowers
 
 1. Open the homepage.
-2. Click "Start my assessment" or select a topic.
+2. Click **"Start my assessment"** or select a topic.
 3. Answer the questions honestly.
 4. Review your recommendation.
 5. Compare the lender estimate with the safe borrowing amount.
 6. Review the fair rate range and all-in annualized cost.
 7. Check the EMI and tenure trade-offs.
 8. Review the stress tests.
-9. Open the Negotiation Card before speaking with a lender.
+9. Open the **Negotiation Card** before speaking with a lender.
 10. Print or save the result if required.
 
 ### For Demo Profiles
@@ -197,6 +237,8 @@ The design includes:
 3. Complete the assessment flow.
 4. Review the final recommendation.
 5. Compare Priya, Ravi, and Anita's outcomes.
+
+---
 
 ## Documentation
 
@@ -229,6 +271,8 @@ Contains:
 - What should be cut
 - Limitations and assumptions
 
+---
+
 ## Disclaimer
 
 Borrower Copilot is an educational, rule-based planning tool.
@@ -243,6 +287,8 @@ Actual loan offers, rates, fees, approval decisions, and eligibility may vary.
 
 This prototype should not be treated as a guarantee of loan approval or financial advice.
 
+---
+
 ## Privacy
 
 - No bank account access
@@ -251,6 +297,8 @@ This prototype should not be treated as a guarantee of loan approval or financia
 - No lender underwriting integration
 - Calculations are performed by the application
 - The prototype does not make real loan approval decisions
+
+---
 
 ## Known Limitations
 
@@ -265,22 +313,26 @@ This prototype should not be treated as a guarantee of loan approval or financia
 - User-entered information may be incomplete or inaccurate
 - Secured-loan calculations are prototype heuristics and should not be treated as actual lender LTV policy
 
+---
+
 ## Testing
 
 Run:
 
-    npm run build
+```bash
+npm run build
+```
 
 Then manually test:
 
-    1. Priya
-       Expected: Borrow or Borrow Less
+1. **Priya**
+   - Expected: Borrow
 
-    2. Ravi
-       Expected: Borrow with secured-loan recommendation
+2. **Ravi**
+   - Expected: Borrow with secured-loan recommendation
 
-    3. Anita
-       Expected: Don't Borrow
+3. **Anita**
+   - Expected: Don't Borrow
 
 Also verify:
 
@@ -302,6 +354,8 @@ Also verify:
 - Mobile layout works
 - Production build completes without errors
 
+---
+
 ## Product Principles
 
 ### 1. Separate lender power from borrower safety
@@ -310,11 +364,11 @@ A lender may approve more than a borrower should comfortably borrow.
 
 Therefore the app clearly separates:
 
-Likely lender sanction
+**Likely lender sanction**
 
 from
 
-Safe borrowing amount
+**Safe borrowing amount**
 
 ### 2. Don't punish unknown information automatically
 
@@ -346,7 +400,9 @@ The app therefore tests scenarios such as:
 
 The user should understand why the application recommends borrowing, borrowing less, or not borrowing.
 
-The rules are documented separately in RULES.md rather than hidden inside the UI.
+The rules are documented separately in `RULES.md` rather than hidden inside the UI.
+
+---
 
 ## Engineering Approach
 
@@ -356,31 +412,35 @@ The application does not claim to predict loan approval using machine learning.
 
 The calculation flow is:
 
-    Borrower answers
-          ↓
-    Profile normalization
-          ↓
-    Income and expense analysis
-          ↓
-    Existing EMI analysis
-          ↓
-    Credit and payment-history factors
-          ↓
-    Loan-type analysis
-          ↓
-    Lender sanction estimate
-          ↓
-    Safe affordability calculation
-          ↓
-    Rate and cost calculation
-          ↓
-    Stress testing
-          ↓
-    Borrow / Borrow Less / Don't Borrow
-          ↓
-    Negotiation Card
+```text
+Borrower answers
+      ↓
+Profile normalization
+      ↓
+Income and expense analysis
+      ↓
+Existing EMI analysis
+      ↓
+Credit and payment-history factors
+      ↓
+Loan-type analysis
+      ↓
+Lender sanction estimate
+      ↓
+Safe affordability calculation
+      ↓
+Rate and cost calculation
+      ↓
+Stress testing
+      ↓
+Borrow / Borrow Less / Don't Borrow
+      ↓
+Negotiation Card
+```
 
 This makes the recommendation easier to inspect, explain, and modify.
+
+---
 
 ## What I Would Build Next
 
@@ -397,6 +457,8 @@ If this prototype were developed further, the next priorities would be:
 9. Accessibility improvements and broader device testing
 10. Automated test coverage for calculation rules
 
+---
+
 ## What I Would Cut
 
 To keep the product focused, I would avoid:
@@ -409,16 +471,20 @@ To keep the product focused, I would avoid:
 - Fake real-time lender offers
 - Features that create a false impression of financial certainty
 
+---
+
 ## License
 
 MIT License.
 
+---
+
 ## Acknowledgments
 
-Built for the Borrower Copilot Challenge.
+Built for the **Borrower Copilot Challenge**.
 
 The project focuses on transparent and explainable borrowing guidance rather than pretending to provide guaranteed lender decisions.
 
-All calculation rules and assumptions are documented in RULES.md.
+All calculation rules and assumptions are documented in `RULES.md`.
 
-Made for Indian borrowers.
+**Made for Indian borrowers.**
